@@ -17,6 +17,7 @@ app = Flask(__name__)
 def _safe_mkdir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
+
 def _find_mlp_model_path() -> str:
     """
     Make running from VS Code easier: find `super_brand_mlp_model.joblib`
@@ -30,7 +31,7 @@ def _find_mlp_model_path() -> str:
     for p in candidates:
         if p.exists():
             return str(p)
-    # Fallback: allow current working directory too
+
     cwd_p = Path.cwd() / "super_brand_mlp_model.joblib"
     return str(cwd_p)
 
@@ -43,59 +44,69 @@ def index():
     file = request.files.get("file")
     mode = request.form.get("mode", "detect")
     strength = request.form.get("strength", "soft")
+
     if not file:
         return "No file uploaded", 400
 
-    # Check file extension
     filename = file.filename.lower()
-    print(f"DEBUG: Uploaded file: {file.filename}, extension check: {filename}")
-    if filename.endswith('.zip'):
+
+    # Handle ZIP file
+    if filename.endswith(".zip"):
         try:
             extracted_files = extract_zip(file, extract_to="uploaded_docs")
-            print(f"DEBUG: ZIP extracted {len(extracted_files)} files: {list(extracted_files.keys())}")
         except zipfile.BadZipFile:
             return "Invalid ZIP file", 400
-    elif filename.endswith(('.pdf', '.doc', '.docx')):
-        # Handle single document file
+
+    # Handle single document
+    elif filename.endswith((".pdf", ".doc", ".docx")):
         unique_folder = os.path.join("uploaded_docs", uuid.uuid4().hex[:8])
         os.makedirs(unique_folder, exist_ok=True)
-        
+
         file_path = os.path.join(unique_folder, file.filename)
         file.save(file_path)
-        print(f"DEBUG: Saved single file to: {file_path}")
-        
-        # Extract document name (without extension)
+
         doc_name = os.path.splitext(file.filename)[0].replace("_", " ").strip() or file.filename
         extracted_files = {doc_name: file_path}
-        print(f"DEBUG: Single file extracted_files: {extracted_files}")
-    else:
-        return "Unsupported file type. Please upload a ZIP file or a PDF/DOC/DOCX document.", 400
 
-    # Read text
+    else:
+        return "Unsupported file type. Please upload a ZIP or PDF/DOC/DOCX file.", 400
+
+    # Read extracted files
     raw_texts = {}
     for doc_name, path in extracted_files.items():
         if os.path.isfile(path):
             text = read_document(path)
-            print(f"DEBUG: Processing file {path}, extracted text length: {len(text)}")
             if not text.strip():
-                print(f"WARNING: No text extracted from {path}")
-                text = f"Error: Could not extract text from {os.path.basename(path)}. The file may be corrupted, password-protected, or contain only images."
+                text = (
+                    f"Error: Could not extract text from {os.path.basename(path)}. "
+                    "The file may be corrupted, password-protected, or contain only images."
+                )
             raw_texts[doc_name] = text
 
-    # Detector (reuse your existing MLP model file name)
+    # Initialize detector
     detector = AIDetector(mlp_model_path=_find_mlp_model_path())
 
     documents = list(raw_texts.keys())
-    ai_before = {doc: detector.predict_ai_generated_percent(raw_texts[doc]) for doc in documents}
-    sentence_scores = {doc: detector.predict_sentence_scores(raw_texts[doc]) for doc in documents}
+
+    ai_before = {
+        doc: detector.predict_ai_generated_percent(raw_texts[doc])
+        for doc in documents
+    }
+
+    sentence_scores = {
+        doc: detector.predict_sentence_scores(raw_texts[doc])
+        for doc in documents
+    }
 
     rewritten_texts = None
     ai_after = None
     similarity_scores = None
 
+    # If user selects detect and remove
     if mode == "detect_and_remove":
         remover = AIRemover()
         rewritten_texts = {}
+
         for doc in documents:
             rewritten_texts[doc] = remover.rewrite(
                 raw_texts[doc],
@@ -103,28 +114,34 @@ def index():
                 ai_score_before=ai_before.get(doc),
             )
 
-        # Raw detector scores on rewritten text
-        ai_after_raw = {doc: detector.predict_ai_generated_percent(rewritten_texts[doc]) for doc in documents}
-
-        # Similarity between original and rewritten (0–100)
-        similarity_scores = {
-            doc: round(SequenceMatcher(None, raw_texts[doc] or "", rewritten_texts[doc] or "").ratio() * 100.0, 2)
+        ai_after_raw = {
+            doc: detector.predict_ai_generated_percent(rewritten_texts[doc])
             for doc in documents
         }
 
-        # Adjusted "after" score that accounts for how different
-        # the humanized text is from the original. If similarity is low,
-        # we downscale the AI% accordingly so 100% AI + strong rewrite
-        # will no longer display as 100%.
+        similarity_scores = {
+            doc: round(
+                SequenceMatcher(
+                    None,
+                    raw_texts[doc] or "",
+                    rewritten_texts[doc] or ""
+                ).ratio() * 100.0,
+                2,
+            )
+            for doc in documents
+        }
+
         ai_after = {}
+
         for doc in documents:
             raw_score = ai_after_raw.get(doc, 0.0) or 0.0
-            sim = (similarity_scores.get(doc) or 0.0) / 100.0  # 0–1
-            # Effective score: raw AI% multiplied by similarity factor,
-            # then nudged slightly down so clear changes always show < 100.
+            sim = (similarity_scores.get(doc) or 0.0) / 100.0
+
             adjusted = raw_score * sim
+
             if raw_score >= 95.0 and sim <= 0.85:
                 adjusted = min(adjusted, raw_score - 10.0)
+
             ai_after[doc] = round(adjusted, 2)
 
     return render_template(
@@ -142,8 +159,11 @@ def index():
 
 if __name__ == "__main__":
     _safe_mkdir("uploaded_docs")
-    # Run without Flask debugger to avoid IDE/terminal conflicts.
-    # Use a unique port so it never collides with other copies of this project.
-    app.run(debug=False, use_reloader=False, port=5003)
 
-
+    # Render-compatible configuration
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False,
+        use_reloader=False,
+    )
