@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Detect + AI Remove</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.25), transparent 55%),
+                radial-gradient(circle at 100% 100%, rgba(34, 197, 94, 0.22), transparent 55%),
+                radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.18), transparent 55%),
+                #020617;
+            color: #e5e7eb;
+        }
+        .card {
+            width: 100%;
+            max-width: 560px;
+            background: #f9fafb;
+            border-radius: 14px;
+            padding: 24px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.7);
+        }
+        h2 { font-size: 22px; margin-bottom: 6px; color: #0f172a; }
+        p { font-size: 13px; color: #4b5563; margin-bottom: 18px; line-height: 1.5; }
+        label { display: block; font-size: 13px; margin-bottom: 8px; color: #111; font-weight: 600; }
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            background-color: #ffffff;
+            color: #111827;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .file-name {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 14px;
+            color: #111827;
+            font-weight: 600;
+            word-break: break-all;
+        }
+        .row { display: flex; gap: 10px; flex-wrap: wrap; }
+        button {
+            padding: 10px 14px;
+            border: 0;
+            border-radius: 10px;
+            background: linear-gradient(135deg, #22c55e, #0ea5e9);
+            color: #020617;
+            font-weight: 700;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            box-shadow: 0 8px 22px rgba(34, 197, 94, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+        button:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 14px 32px rgba(56, 189, 248, 0.45);
+        }
+        button.secondary { background: #111827; color: #f9fafb; }
+        .hint { font-size: 12px; color: #6b7280; margin-top: 10px; }
+
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, #22c55e, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #020617;
+            font-weight: 800;
+            font-size: 15px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.6);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #0f172a;
+        }
+
+        .brand-sub {
+            font-size: 12px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="brand-bar">
+            <div class="brand-mark">MV</div>
+            <div class="brand-text">
+                <span class="brand-title">METRICVIBES</span>
+                <span class="brand-sub">AI Detect + AI Remove</span>
+            </div>
+        </div>
+        <h2>Upload ZIP (AI Detect + AI Remove)</h2>
+        <p>
+            Put your student assignment files (<b>.pdf</b> / <b>.docx</b>) inside a ZIP file.
+            The report will show the <b>AI generated %</b> and the <b>AI-removed (rewritten) text</b>.
+        </p>
+
+        <form id="uploadForm" action="/" method="POST" enctype="multipart/form-data">
+            <label for="file">Select ZIP file</label>
+            <input id="file" name="file" type="file" accept=".zip,.pdf,.doc,.docx" required />
+            <span id="fileName" class="file-name">No file selected</span>
+            <label for="strength" style="margin-top: 6px;">Humanize strength</label>
+            <select id="strength" name="strength" style="width:100%; padding:10px; border:1px solid #ddd; border-radius:10px; margin-bottom:14px;">
+                <option value="soft" selected>Soft (keep text very similar)</option>
+                <option value="strong">Strong (more rewrite)</option>
+            </select>
+            <div class="row">
+                <button type="submit" name="mode" value="detect">Detect AI %</button>
+                <button type="submit" name="mode" value="detect_and_remove" class="secondary">
+                    Detect + AI Remove
+                </button>
+            </div>
+            <div class="hint">
+                Tip: “Detect + AI Remove” can be slower because the T5 model rewrites the text.
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file');
+        const fileNameSpan = document.getElementById('fileName');
+
+        if (fileInput && fileNameSpan) {
+            fileInput.addEventListener('change', function () {
+                if (this.files && this.files.length > 0) {
+                    fileNameSpan.textContent = this.files[0].name;
+                } else {
+                    fileNameSpan.textContent = 'No file selected';
+                }
+            });
+        }
+    </script>
+</body>
+</html>

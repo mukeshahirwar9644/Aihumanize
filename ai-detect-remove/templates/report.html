@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Detect + AI Remove Report</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 0% 0%, rgba(56, 189, 248, 0.25), transparent 55%),
+                radial-gradient(circle at 100% 100%, rgba(34, 197, 94, 0.22), transparent 55%),
+                radial-gradient(circle at 0% 100%, rgba(59, 130, 246, 0.18), transparent 55%),
+                #020617;
+            color: #e5e7eb;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            background: #f9fafb;
+            padding: 20px 24px 32px;
+            border-radius: 12px;
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.7);
+            color: #111827;
+        }
+        .top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+        h2 { font-size: 22px; color: #0f172a; }
+        .sub { font-size: 12px; color: #4b5563; margin-top: 4px; }
+        .btn {
+            display: inline-block;
+            padding: 10px 14px;
+            background: linear-gradient(135deg, #22c55e, #0ea5e9);
+            color: #020617;
+            text-decoration: none;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 13px;
+            letter-spacing: 0.04em;
+            box-shadow: 0 8px 22px rgba(34, 197, 94, 0.35);
+            transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.03);
+            box-shadow: 0 14px 32px rgba(56, 189, 248, 0.45);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 16px;
+        }
+        th, td {
+            border: 1px solid #e3e3e3;
+            padding: 10px;
+            text-align: center;
+            font-size: 13px;
+            vertical-align: top;
+        }
+        th {
+            background: #020617;
+            color: #f9fafb;
+            font-weight: 700;
+        }
+        .score {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            color: white;
+            font-weight: 700;
+            min-width: 78px;
+        }
+        .very-high { background: #e02424; }
+        .high { background: #f59e0b; }
+        .medium { background: #fbbf24; color: #111827; }
+        .low { background: #16a34a; }
+
+        .section {
+            margin-top: 18px;
+            padding-top: 18px;
+            border-top: 2px solid #e5e7eb;
+        }
+        .section h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #0f172a;
+        }
+        .doc {
+            margin-bottom: 16px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .doc-title { font-weight: 800; margin-bottom: 6px; color: #0f172a; }
+        textarea {
+            width: 100%;
+            border-radius: 8px;
+            border: 1px solid #d1d5db;
+            padding: 10px;
+            font-size: 12px;
+            line-height: 1.4;
+            resize: vertical;
+            background: white;
+        }
+
+        .brand-bar {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .brand-mark {
+            width: 30px;
+            height: 30px;
+            border-radius: 11px;
+            background: linear-gradient(135deg, #22c55e, #0ea5e9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #020617;
+            font-weight: 800;
+            font-size: 15px;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.6);
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .brand-title {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: #0f172a;
+        }
+
+        .brand-sub {
+            font-size: 12px;
+            color: #6b7280;
+        }
+
+        .sent-doc-title {
+            font-weight: 700;
+            margin: 10px 0 6px;
+            color: #0f172a;
+        }
+
+        .sent-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 8px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            font-size: 13px;
+        }
+
+        .sent-text {
+            flex: 1;
+            text-align: left;
+        }
+
+        .sent-badge {
+            min-width: 70px;
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .risk-very-high { background: #fef2f2; color: #b91c1c; }
+        .risk-high { background: #fff7ed; color: #b45309; }
+        .risk-med { background: #fffbeb; color: #92400e; }
+        .risk-low { background: #ecfdf5; color: #166534; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="brand-bar">
+            <div class="brand-mark">MV</div>
+            <div class="brand-text">
+                <span class="brand-title">METRICVIBES</span>
+                <span class="brand-sub">AI Detect + AI Remove</span>
+            </div>
+        </div>
+        <div class="top">
+            <div>
+                <h2>AI Detect + AI Remove Report</h2>
+                <div class="sub">
+                    Mode: <b>{{ mode }}</b>{% if strength %} · Strength: <b>{{ strength }}</b>{% endif %}
+                </div>
+            </div>
+            <a class="btn" href="/">Upload another ZIP</a>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Document</th>
+                    <th>AI % (Original)</th>
+                    <th>AI % (After Remove)</th>
+                    <th>Similarity %</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for doc in documents %}
+                <tr>
+                    <td><b>{{ doc }}</b></td>
+                    <td>
+                        <span class="score
+                            {% if ai_before[doc] > 75 %}very-high
+                            {% elif ai_before[doc] > 50 %}high
+                            {% elif ai_before[doc] > 20 %}medium
+                            {% else %}low{% endif %}">
+                            {{ ai_before[doc] }}%
+                        </span>
+                    </td>
+                    <td>
+                        {% if ai_after and ai_after.get(doc) is not none %}
+                            <span class="score
+                                {% if ai_after[doc] > 75 %}very-high
+                                {% elif ai_after[doc] > 50 %}high
+                                {% elif ai_after[doc] > 20 %}medium
+                                {% else %}low{% endif %}">
+                                {{ ai_after[doc] }}%
+                            </span>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if similarity_scores and similarity_scores.get(doc) is not none %}
+                            {{ similarity_scores[doc] }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+
+        {% if rewritten_texts %}
+        <div class="section">
+            <h3>AI Removed / Humanized Text (below table)</h3>
+            {% for doc, text in rewritten_texts.items() %}
+                <div class="doc">
+                    <div class="doc-title">{{ doc }}</div>
+                    <textarea rows="10" readonly>{{ text }}</textarea>
+                </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if sentence_scores %}
+        <div class="section">
+            <h3>Sentence-level AI Risk (original text)</h3>
+            {% for doc in documents %}
+                {% set sents = sentence_scores.get(doc) %}
+                {% if sents %}
+                <div>
+                    <div class="sent-doc-title">{{ doc }}</div>
+                    {% for sent, score in sents %}
+                    <div class="sent-row
+                        {% if score > 75 %}risk-very-high
+                        {% elif score > 50 %}risk-high
+                        {% elif score > 20 %}risk-med
+                        {% else %}risk-low{% endif %}">
+                        <div class="sent-text">{{ sent }}</div>
+                        <div class="sent-badge">{{ score }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
+
+
