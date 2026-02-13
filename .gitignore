@@ -1,0 +1,10 @@
+my_new_env/
+venv/
+__pycache__/
+*.pyc
+uploaded_docs/
+.env
+*.log
+*.joblib
+*.pkl
+.DS_Store
